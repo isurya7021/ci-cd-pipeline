@@ -8,7 +8,9 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'file:///media/suryasen/New Volume/workspace/cicd-lab/sample-app'
+                git url: 'https://github.com/isurya7021/ci-cd-pipeline.git',
+                branch: 'main',
+                credentialsId: 'github-token'
             }
         }
         stage('Build Docker Image') {
