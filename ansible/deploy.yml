@@ -10,12 +10,9 @@
     venv_dir: "{{ install_dir }}/venv"
 
   tasks:
-    - name: Ensure Python3, pip and venv module are installed
+    - name: Ensure Python3 & pip are installed
       apt:
-        name:
-          - python3
-          - python3-pip
-          - python3-venv
+        name: python3-venv
         state: present
         update_cache: yes
 
@@ -25,31 +22,26 @@
         state: directory
         mode: '0755'
 
+    - name: Create virtual environment
+      command: python3 -m venv "{{ venv_dir }}"
+      args:
+        creates: "{{ venv_dir }}/bin/activate"
+
     - name: Download artifact from Nexus
       get_url:
         url: "{{ nexus_url }}/repository/{{ repo }}/{{ app_name }}-{{ version }}-py3-none-any.whl"
-        dest: "{{ install_dir }}/{{ app_name }}-{{ version }}.whl"
+        dest: "{{ install_dir }}/"
         url_username: "{{ lookup('env','NEXUS_USER') }}"
         url_password: "{{ lookup('env','NEXUS_PASS') }}"
 
-    - name: Create Python virtual environment
-      command: python3 -m venv "{{ venv_dir }}"
-      args:
-        creates: "{{ venv_dir }}"
-
-    - name: Upgrade pip in virtual environment
-      command: "{{ venv_dir }}/bin/pip install --upgrade pip setuptools wheel"
+    - name: Find the downloaded wheel
+      find:
+        paths: "{{ install_dir }}"
+        patterns: "{{ app_name }}-{{ version }}*.whl"
+      register: wheel_file
 
     - name: Install application from wheel in virtual environment
       pip:
+        name: "{{ wheel_file.files[0].path }}"
         virtualenv: "{{ venv_dir }}"
-        virtualenv_python: python3
-        name: "{{ install_dir }}/{{ app_name }}-{{ version }}.whl"
         state: present
-
-    - name: Optional - create symlink to app executable (if any)
-      file:
-        src: "{{ venv_dir }}/bin/{{ app_name }}"
-        dest: "/usr/local/bin/{{ app_name }}"
-        state: link
-      ignore_errors: yes
