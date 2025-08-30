@@ -2,67 +2,52 @@ pipeline {
     agent any
 
     environment {
-        NEXUS_URL = "http://nexus.example.com:8081/repository/pypi-internal/"
-        NEXUS_REPO = "pypi-internal"
-        NEXUS_CREDENTIALS = "nexus-creds"   // Jenkins Credentials ID
-        ANSIBLE_INVENTORY = "ansible/inventory/hosts.ini"
-        APP_NAME = "my-python-app"
+        REPO_URL = 'https://github.com/isurya7021/ci-cd-pipeline.git'
+        APP_NAME = 'myapp'
+        VERSION = "1.0.${BUILD_NUMBER}"
+        NEXUS_URL = 'http://localhost:8081'
+        NEXUS_REPO = 'pypi-releases'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/isurya7021/ci-cd-pipeline.git'
+                git branch: 'main',
+                    credentialsId: 'github-credentials',
+                    url: "${REPO_URL}"
             }
         }
 
-        stage('Package') {
+        stage('Build Package') {
             steps {
                 sh '''
-                    python3 -m venv venv
-                    source venv/bin/activate
-                    pip install --upgrade pip setuptools wheel
-                    python setup.py sdist bdist_wheel
+                python3 -m venv venv
+                source venv/bin/activate
+                pip install --upgrade pip setuptools wheel
+                python setup.py sdist bdist_wheel
                 '''
             }
         }
 
-        stage('Publish to Nexus') {
+        stage('Upload to Nexus') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "${NEXUS_CREDENTIALS}",
-                                                 usernameVariable: 'NEXUS_USER',
-                                                 passwordVariable: 'NEXUS_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'nexus-credentials', passwordVariable: 'NEXUS_PASS', usernameVariable: 'NEXUS_USER')]) {
                     sh '''
-                        PACKAGE_FILE=$(ls dist/*.tar.gz | head -n 1)
-                        VERSION=$(echo $PACKAGE_FILE | sed -E 's/.*-([0-9.]+).tar.gz/\\1/')
-                        echo "Package version: $VERSION" > version.txt
-                        curl -v -u $NEXUS_USER:$NEXUS_PASS \
-                          --upload-file $PACKAGE_FILE \
-                          ${NEXUS_URL}
+                    ARTIFACT=$(ls dist/*.whl | head -n 1)
+                    curl -u $NEXUS_USER:$NEXUS_PASS --upload-file $ARTIFACT \
+                        $NEXUS_URL/repository/$NEXUS_REPO/$APP_NAME-$VERSION-py3-none-any.whl
                     '''
                 }
             }
         }
 
-        stage('Deploy with Ansible') {
+        stage('Trigger Ansible Deployment') {
             steps {
-                script {
-                    def version = readFile('version.txt').trim().split(': ')[1]
-                    sh """
-                        ansible-playbook -i ${ANSIBLE_INVENTORY} ansible/deploy.yml \
-                          --extra-vars "app_name=${APP_NAME} package_version=${version}"
-                    """
-                }
+                sh '''
+                ansible-playbook -i ansible/inventory ansible/deploy.yml \
+                    --extra-vars "version=$VERSION app_name=$APP_NAME nexus_url=$NEXUS_URL repo=$NEXUS_REPO"
+                '''
             }
-        }
-    }
-
-    post {
-        success {
-            echo "✅ Deployment successful!"
-        }
-        failure {
-            echo "❌ Deployment failed. Check logs."
         }
     }
 }

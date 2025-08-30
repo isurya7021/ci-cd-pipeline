@@ -1,16 +1,10 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="my-python-app",
-    version="1.0.0",
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    name="myapp",  # <-- CHANGE THIS
+    version="0.1.0",
+    packages=find_packages(),
     install_requires=[
-        # Add runtime dependencies here
+        "requests",  # example dependency, adjust as needed
     ],
-    entry_points={
-        "console_scripts": [
-            "my-python-app=my_python_app.main:main",
-        ],
-    },
 )

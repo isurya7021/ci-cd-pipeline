@@ -1,40 +1,34 @@
 ---
-- name: Deploy Python application
-  hosts: app_servers
+- hosts: app_servers
   become: yes
-
   vars:
+    version: "{{ version }}"
     app_name: "{{ app_name }}"
-    nexus_url: "http://nexus.example.com:8081/repository/pypi-internal"
-    package_version: "{{ package_version }}"
-    venv_path: "/opt/{{ app_name }}/venv"
-    app_dir: "/opt/{{ app_name }}"
+    nexus_url: "{{ nexus_url }}"
+    repo: "{{ repo }}"
+    install_dir: /opt/{{ app_name }}
 
   tasks:
-    - name: Ensure app directory exists
+    - name: Ensure Python & pip are installed
+      apt:
+        name: python3-pip
+        state: present
+        update_cache: yes
+
+    - name: Create install directory
       file:
-        path: "{{ app_dir }}"
+        path: "{{ install_dir }}"
         state: directory
-        owner: "{{ ansible_user }}"
-        group: "{{ ansible_user }}"
+        mode: '0755'
 
-    - name: Ensure virtual environment exists
-      command: python3 -m venv "{{ venv_path }}"
-      args:
-        creates: "{{ venv_path }}/bin/activate"
-
-    - name: Download package from Nexus
+    - name: Download artifact from Nexus
       get_url:
-        url: "{{ nexus_url }}/{{ app_name }}-{{ package_version }}.tar.gz"
-        dest: "{{ app_dir }}/{{ app_name }}-{{ package_version }}.tar.gz"
-        mode: '0644'
-        force: yes
+        url: "{{ nexus_url }}/repository/{{ repo }}/{{ app_name }}-{{ version }}-py3-none-any.whl"
+        dest: "{{ install_dir }}/{{ app_name }}-{{ version }}.whl"
+        url_username: "{{ lookup('env','NEXUS_USER') }}"
+        url_password: "{{ lookup('env','NEXUS_PASS') }}"
 
-    - name: Install package into venv
-      command: "{{ venv_path }}/bin/pip install {{ app_dir }}/{{ app_name }}-{{ package_version }}.tar.gz"
-
-    - name: Restart application service
-      systemd:
-        name: "{{ app_name }}"
-        state: restarted
-        enabled: yes
+    - name: Install application from wheel
+      pip:
+        name: "{{ install_dir }}/{{ app_name }}-{{ version }}.whl"
+        state: present
