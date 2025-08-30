@@ -46,7 +46,7 @@
         virtualenv: "{{ venv_dir }}"
         state: present
 
-    - name: Create systemd service file
+    - name: Ensure systemd service file for app exists
       copy:
         dest: /etc/systemd/system/{{ app_name }}.service
         content: |
@@ -62,6 +62,9 @@
 
           [Install]
           WantedBy=multi-user.target
+      owner: root
+      group: root
+      mode: '0644'
       notify:
         - restart {{ app_name }}
 
@@ -71,3 +74,4 @@
         name: "{{ app_name }}"
         state: restarted
         enabled: yes
+        daemon_reload: yes
