@@ -1,12 +1,22 @@
-# Use a lightweight Python image
-FROM python:3.9-slim
+# Use official Jenkins LTS image as base
+FROM jenkins/jenkins:lts
 
-# Set working directory inside the container
-WORKDIR /app
+# Switch to root to install Docker CLI
+USER root
 
-# Copy your application code
-COPY app.py /app/app.py
+# Install Docker CLI dependencies
+RUN apt-get update && apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release \
+    software-properties-common && \
+    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" > /etc/apt/sources.list.d/docker.list && \
+    apt-get update && \
+    apt-get install -y docker-ce-cli && \
+    rm -rf /var/lib/apt/lists/*
 
-# Run the app when the container starts
-CMD ["python", "app.py"]
-
+# Switch back to Jenkins user
+USER jenkins
