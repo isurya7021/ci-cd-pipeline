@@ -45,3 +45,29 @@
         name: "{{ wheel_file.files[0].path }}"
         virtualenv: "{{ venv_dir }}"
         state: present
+
+    - name: Create systemd service file
+      copy:
+        dest: /etc/systemd/system/{{ app_name }}.service
+        content: |
+          [Unit]
+          Description={{ app_name }} service
+          After=network.target
+
+          [Service]
+          User=root
+          WorkingDirectory={{ install_dir }}
+          ExecStart={{ venv_dir }}/bin/python -m {{ app_name }}
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+      notify:
+        - restart {{ app_name }}
+
+  handlers:
+    - name: restart {{ app_name }}
+      systemd:
+        name: "{{ app_name }}"
+        state: restarted
+        enabled: yes
