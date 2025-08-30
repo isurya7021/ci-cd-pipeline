@@ -11,6 +11,12 @@ pipeline {
                 git url: 'https://github.com/isurya7021/ci-cd-pipeline.git', branch: 'main', credentialsId: 'github-token'
             }
         }
+        stage('Check Docker') {
+            steps {
+                sh 'docker --version'
+                sh 'docker info'
+            }
+        }
         stage('Build Docker Image') {
             steps {
                 sh '''
