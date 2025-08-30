@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'https://github.com/YOUR_ORG/YOUR_REPO.git'
+        REPO_URL = 'https://github.com/isurya7021/ci-cd-pipeline.git'
         APP_NAME = 'myapp'
         VERSION = "1.0.${BUILD_NUMBER}"
         NEXUS_URL = 'http://localhost:8081'
