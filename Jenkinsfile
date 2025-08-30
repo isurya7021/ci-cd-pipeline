@@ -6,7 +6,7 @@ pipeline {
         APP_NAME = 'myapp'
         VERSION = "1.0.${BUILD_NUMBER}"
         NEXUS_URL = 'http://localhost:8081'
-        NEXUS_REPO = 'pypi-releases'
+        NEXUS_REPO = 'python-packages'
     }
 
     stages {
