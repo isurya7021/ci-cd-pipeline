@@ -1,0 +1,18 @@
+- hosts: local
+  tasks:
+    - name: Stop and remove old container if running
+      community.docker.docker_container:
+        name: sample-app
+        state: absent
+
+    - name: Pull image from Nexus
+      community.docker.docker_image:
+        name: localhost:8082/docker_local/myapp:latest
+        source: pull
+
+    - name: Run container
+      community.docker.docker_container:
+        name: sample-app
+        image: localhost:8082/docker_local/myapp:latest
+        state: started
+        restart_policy: always
