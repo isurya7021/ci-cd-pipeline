@@ -12,7 +12,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/your-org/my-python-app.git'
+                git branch: 'main', url: 'https://github.com/isurya7021/ci-cd-pipeline.git'
             }
         }
 
