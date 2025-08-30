@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        REPO_URL = 'https://github.com/isurya7021/ci-cd-pipeline.git'
+        REPO_URL = 'https://github.com/YOUR_ORG/YOUR_REPO.git'
         APP_NAME = 'myapp'
         VERSION = "1.0.${BUILD_NUMBER}"
         NEXUS_URL = 'http://localhost:8081'
@@ -32,10 +32,11 @@ pipeline {
         stage('Upload to Nexus') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-credentials', passwordVariable: 'NEXUS_PASS', usernameVariable: 'NEXUS_USER')]) {
-                    sh '''
+                    sh '''#!/bin/bash
                     ARTIFACT=$(ls dist/*.whl | head -n 1)
+                    BASENAME=$(basename $ARTIFACT)
                     curl -u $NEXUS_USER:$NEXUS_PASS --upload-file $ARTIFACT \
-                        $NEXUS_URL/repository/$NEXUS_REPO/$APP_NAME-$VERSION-py3-none-any.whl
+                        $NEXUS_URL/repository/$NEXUS_REPO/$BASENAME
                     '''
                 }
             }

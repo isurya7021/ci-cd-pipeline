@@ -28,6 +28,7 @@
         url_username: "{{ lookup('env','NEXUS_USER') }}"
         url_password: "{{ lookup('env','NEXUS_PASS') }}"
 
+
     - name: Install application from wheel
       pip:
         name: "{{ install_dir }}/{{ app_name }}-{{ version }}.whl"
