@@ -1,43 +1,68 @@
 pipeline {
     agent any
+
     environment {
-        IMAGE_NAME = "myapp"
-        IMAGE_TAG = "latest"
-        DOCKER_REGISTRY = "localhost:8082/docker_local"
+        NEXUS_URL = "http://nexus.example.com:8081/repository/pypi-internal/"
+        NEXUS_REPO = "pypi-internal"
+        NEXUS_CREDENTIALS = "nexus-creds"   // Jenkins Credentials ID
+        ANSIBLE_INVENTORY = "ansible/inventory/hosts.ini"
+        APP_NAME = "my-python-app"
     }
+
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/isurya7021/ci-cd-pipeline.git', branch: 'main', credentialsId: 'github-token'
+                git branch: 'main', url: 'https://github.com/your-org/my-python-app.git'
             }
         }
-        stage('Check Docker') {
-            steps {
-                sh 'docker --version'
-                sh 'docker info'
-            }
-        }
-        stage('Build Docker Image') {
+
+        stage('Package') {
             steps {
                 sh '''
-                docker build -t $IMAGE_NAME:$IMAGE_TAG .
-                docker tag $IMAGE_NAME:$IMAGE_TAG $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
+                    python3 -m venv venv
+                    source venv/bin/activate
+                    pip install --upgrade pip setuptools wheel
+                    python setup.py sdist bdist_wheel
                 '''
             }
         }
-        stage('Push to Nexus Registry') {
+
+        stage('Publish to Nexus') {
             steps {
-                sh '''
-                docker push $DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG
-                '''
+                withCredentials([usernamePassword(credentialsId: "${NEXUS_CREDENTIALS}",
+                                                 usernameVariable: 'NEXUS_USER',
+                                                 passwordVariable: 'NEXUS_PASS')]) {
+                    sh '''
+                        PACKAGE_FILE=$(ls dist/*.tar.gz | head -n 1)
+                        VERSION=$(echo $PACKAGE_FILE | sed -E 's/.*-([0-9.]+).tar.gz/\\1/')
+                        echo "Package version: $VERSION" > version.txt
+                        curl -v -u $NEXUS_USER:$NEXUS_PASS \
+                          --upload-file $PACKAGE_FILE \
+                          ${NEXUS_URL}
+                    '''
+                }
             }
         }
+
         stage('Deploy with Ansible') {
             steps {
-                sh '''
-                ansible-playbook -i hosts.ini deploy.yml
-                '''
+                script {
+                    def version = readFile('version.txt').trim().split(': ')[1]
+                    sh """
+                        ansible-playbook -i ${ANSIBLE_INVENTORY} ansible/deploy.yml \
+                          --extra-vars "app_name=${APP_NAME} package_version=${version}"
+                    """
+                }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "✅ Deployment successful!"
+        }
+        failure {
+            echo "❌ Deployment failed. Check logs."
         }
     }
 }

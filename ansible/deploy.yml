@@ -1,0 +1,40 @@
+---
+- name: Deploy Python application
+  hosts: app_servers
+  become: yes
+
+  vars:
+    app_name: "{{ app_name }}"
+    nexus_url: "http://nexus.example.com:8081/repository/pypi-internal"
+    package_version: "{{ package_version }}"
+    venv_path: "/opt/{{ app_name }}/venv"
+    app_dir: "/opt/{{ app_name }}"
+
+  tasks:
+    - name: Ensure app directory exists
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Ensure virtual environment exists
+      command: python3 -m venv "{{ venv_path }}"
+      args:
+        creates: "{{ venv_path }}/bin/activate"
+
+    - name: Download package from Nexus
+      get_url:
+        url: "{{ nexus_url }}/{{ app_name }}-{{ package_version }}.tar.gz"
+        dest: "{{ app_dir }}/{{ app_name }}-{{ package_version }}.tar.gz"
+        mode: '0644'
+        force: yes
+
+    - name: Install package into venv
+      command: "{{ venv_path }}/bin/pip install {{ app_dir }}/{{ app_name }}-{{ package_version }}.tar.gz"
+
+    - name: Restart application service
+      systemd:
+        name: "{{ app_name }}"
+        state: restarted
+        enabled: yes
