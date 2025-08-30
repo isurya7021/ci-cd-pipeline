@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 VERSION = os.getenv("BUILD_VERSION", "0.1.0")
 
 setup(
-    name="myapp",  # <-- change if your app has a different name
+    name="myapp",
     version=VERSION,
     packages=find_packages(),
     install_requires=[
@@ -13,7 +13,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "myapp = myapp.__main__:main"  # so ExecStart can run `myapp`
+            "myapp = myapp.__main__:main"
         ]
     },
 )

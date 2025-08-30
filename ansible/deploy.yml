@@ -10,7 +10,7 @@
     venv_dir: "{{ install_dir }}/venv"
 
   tasks:
-    - name: Ensure Python3 & pip are installed
+    - name: Ensure Python3 venv is installed
       apt:
         name: python3-venv
         state: present
@@ -37,7 +37,7 @@
     - name: Find the downloaded wheel
       find:
         paths: "{{ install_dir }}"
-        patterns: "{{ app_name }}-{{ version }}*.whl"
+        patterns: "{{ app_name }}-{{ version }}-py3-none-any.whl"
       register: wheel_file
 
     - name: Install application from wheel in virtual environment

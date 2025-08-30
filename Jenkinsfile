@@ -21,6 +21,8 @@ pipeline {
         stage('Build Package') {
             steps {
                 sh '''#!/bin/bash
+                set -e  # stop on first error
+
                 # Create and activate virtual environment
                 python3 -m venv venv
                 source venv/bin/activate
@@ -28,14 +30,11 @@ pipeline {
                 # Upgrade packaging tools
                 pip install --upgrade pip setuptools wheel
 
-                # Pass Jenkins VERSION into setup.py
-                export BUILD_VERSION=${VERSION}
+                # Build package with Jenkins VERSION
+                BUILD_VERSION=${VERSION} python setup.py sdist bdist_wheel
 
-                # Optional: ensure setup.py reads BUILD_VERSION
-                # python setup.py should already use: os.getenv("BUILD_VERSION", "0.1.0")
-
-                # Build source and wheel distributions
-                python setup.py sdist bdist_wheel
+                echo "Build complete. Artifacts:"
+                ls -lh dist/
                 '''
             }
         }
@@ -46,11 +45,11 @@ pipeline {
                                                 passwordVariable: 'NEXUS_PASS', 
                                                 usernameVariable: 'NEXUS_USER')]) {
                     sh '''#!/bin/bash
-                    # Activate venv if needed
+                    set -e
                     source venv/bin/activate || true
 
-                    # Find the wheel file matching the VERSION
-                    ARTIFACT=$(ls dist/*-${VERSION}-py3-none-any.whl | head -n 1)
+                    # Find the built wheel
+                    ARTIFACT=$(ls dist/myapp-${VERSION}-py3-none-any.whl | head -n 1)
 
                     if [ ! -f "$ARTIFACT" ]; then
                         echo "ERROR: Artifact not found for version ${VERSION}"
