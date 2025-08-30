@@ -1,4 +1,3 @@
-# myapp/__main__.py
 import time
 
 def main():
